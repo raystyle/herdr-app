@@ -21,23 +21,23 @@ export async function defaults(kind, machine) {
 // 用 `argv` 重启 agent `t`(hc get 的 record),停驻在 chat pane `pane` 之后。
 // 以新 agent 的地址 resolve。
 export async function restart(t, built, pane) {
-  const task = t.labels?.["herdr.task"];
-  if (task) {
-    // agent 不变时 herdr-task 恢复自己的 session。
-    const r = await exec("herdr-task.cmd", ["switch", task, "--folder", t.foreground?.cwd ?? t.cwd, "--argv", JSON.stringify(built.base), "--json"]);
-    let out = {};
-    try { out = JSON.parse(r.stdout || "{}"); } catch {}
-    if (r.code !== 0 || !out.terminal) throw new Error((r.stderr || r.stdout).trim() || "herdr-task switch failed");
-    const origin = t.labels?.["herdr.chat.origin"] || t.address;
-    await hc(["label", out.terminal, `herdr.chat=${chatLabel(pane)}`, `herdr.chat.origin=${origin}`]);
-    // 它由 tab 启动:停驻在此聊天之后,与 Chat 开关的做法一致。
-    await exec("herdr-app", ["do", "terminal.park", "--terminal", out.terminal]);
-    return out.terminal;
-  }
-  const env = `HERDR_RESTART_CHAT="$1"${built.resume ? " HERDR_RESTART_RESUME=1" : ""}`;
-  const r = await exec("sh", ["-c", `${env} bash "$2" "$3" "$4"`, "x", chatLabel(pane), `${appHome()}/mods/coordinator/restart.sh`, t.address, JSON.stringify(built.argv)]);
-  const addr = r.stdout.trim().split("\n").pop();
-  if (r.code !== 0 || !addr) throw new Error(r.stderr.trim() || "The agent didn't restart.");
+  // 重启:以相同 argv 新开 tab 启动 agent,标上 herdr.chat 停驻到本聊天之后,
+  // 原 terminal 随之结束。会话续接交给 agent CLI 自己的 resume 参数。
+  const cwd = t.foreground?.cwd ?? t.cwd ?? null;
+  const origin = t.labels?.["herdr.chat.origin"] || t.address;
+  const argv = built.argv ?? t.argv ?? [];
+  const made = await exec("herdr-app", [
+    "do", "tab.new",
+    "--argv", JSON.stringify(argv),
+    ...(cwd ? ["--folder", cwd] : []),
+    "--json",
+  ]).catch(() => null);
+  let addr = "";
+  try { addr = JSON.parse(made?.stdout || "{}").terminal ?? ""; } catch {}
+  if (!addr) throw new Error((made?.stderr || made?.stdout || "").trim() || "agent 没有重启。");
+  await hc(["label", addr, `herdr.chat=${chatLabel(pane)}`, `herdr.chat.origin=${origin}`]);
+  await exec("herdr-app", ["do", "terminal.park", "--terminal", addr]);
+  await hc(["kill", t.address]).catch(() => {});
   return addr;
 }
 

@@ -21,7 +21,6 @@ src/
   mods/          17 个界面 mod(每个自包含,单一事实源)
   layouts/       herdr-winapp.json 布局
   templates/     assistant.md(Assistant 角色指令)
-  bin/           herdr-secret(密钥库 CLI,chat 的密钥卡片用)
 winshim/         Windows 下 Python 的 fcntl/pwd 等替代实现
 AGENTS.md        维护者手册:目录说明、部署方式、关键坑
 ```
@@ -54,8 +53,7 @@ cp -r src/mods/* ~/.config/herdr-app/mods/
 cp src/layouts/herdr-winapp.json ~/.config/herdr-app/layouts/
 ```
 
-Herdr 自带的基础 mod(spaces、tabs、files、changes、menu 等)由 herdr-app 自己生成,不在本仓库。数据目录:`~/.config/herdr-winapp`(设置)、`~/.local/share/herdr-winapp`(密钥库)。
-
+Herdr 自带的基础 mod(spaces、tabs、files、changes、menu 等)由 herdr-app 自己生成,不在本仓库。
 ## 运行要求
 
 - herdr-app ≥ 0.1.12、herdr-core ≥ 0.1.17(Windows)

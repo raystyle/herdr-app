@@ -28,10 +28,8 @@ herdr-app(Windows)的中文定制界面:chat 对话 + 终端模式。
 | `src/mods/` | 17 个 mod 的源码(单一事实源,每个 mod 自包含) |
 | `src/layouts/herdr-winapp.json` | 布局 |
 | `src/templates/assistant.md` | Assistant 角色指令模板 |
-| `src/bin/herdr-secret` | 密钥库 CLI(chat 的密钥卡片用) |
 | `winshim/` | Python shims(fcntl/pwd/sitecustomize+winpatch),部署副本在 `~/.config/herdr-app/.winshim/`,被 .cmd 启动器引用 |
 
-数据目录:`~/.config/herdr-winapp`(设置)、`~/.local/share/herdr-winapp`(密钥库 vault)。
 
 ## 部署
 

@@ -44,8 +44,6 @@ import * as strips from "./strips.js";
 import { button, red, green, amber, H, RADIUS, TEXT, toast, toastWho, plainError } from "./ui.js";
 import { openViewer, noteChatArea } from "./artview.js";
 import { KEY_HOLDER, holdKeys, keysElsewhere, dialogHolds, liveHolder } from "./keyholder.js";
-import { SecretCards } from "./secret-card.js";
-import * as secrets from "./secrets.js";
 import { taskDot, ownProgress } from "./dot.js";
 import * as attach from "./attach.js";
 import * as slash from "./slash.js";
@@ -412,10 +410,7 @@ export default class Chat extends View {
     }, cx.focus_handle());
     this.codexAsk = null;
     this.shownAsks = new Map();
-    // Secrets agents ask for (herdr-secret ask): their masked cards, here and for the workers.
-    this.secretCards = new SecretCards();
     // Kept or declined here: its quiet line, where its card was.
-    this.secretCards.onEnd = (ask, how) => this.secretEnded(ask, how);
     // Cards' controls by id: their drawn widths, for which one a press was on (strips.js hit()).
     this.cardW = new Map();
     this.readingAsks = new Set();
@@ -535,11 +530,7 @@ export default class Chat extends View {
             await fs.unlink(f).catch(() => {});
             this.toTerminal();
           } else if (req?.pane && req.pane === me && req.secret) {
-            // { secret: true }:键盘转到第一张 secret 卡片的遮蔽输入框。
             await fs.unlink(f).catch(() => {});
-            // 在 render 中获取,待卡片的框就位后(secret-card.js 的 focus())。
-            this.focusSecret = Date.now();
-            cx.notify();
           } else if (req?.pane && req.pane === me && req.thread?.terminal) {
             await fs.unlink(f).catch(() => {});
             this.openThread(req.thread);
@@ -840,12 +831,6 @@ export default class Chat extends View {
     for (const a of [...this.shownAsks.values()].sort((a, b) => rank(a) - rank(b) || (a.id < b.id ? -1 : 1))) {
       if (!this.answeredAsks.has(a.id) && !out.some((b) => b.ref === a.ref)) out.push(a);
     }
-    // 请求 secret 的 worker(secret-card.js):若它没有别的请求,也显示其打码卡片。
-    for (const [address, x] of by) {
-      for (const s of this.secretCards.items(address)) {
-        if (!out.some((b) => b.ref === x.ref)) out.push({ id: `secret:${address}:${s.name}`, terminal: address, ref: x.ref, title: x.title, words: { kind: "secret", title: `Secret: ${s.name}` }, secret: s });
-      }
-    }
     return out;
   }
 
@@ -872,15 +857,6 @@ export default class Chat extends View {
     try { localStorage.setItem(`askends:${this.addr}`, JSON.stringify(this.askEnds)); } catch {}
   }
 
-  // 在卡片上就地保留或拒绝的 secret 请求:在其卡片对应时刻生成一条 quiet line。
-  secretEnded(ask, how) {
-    this.loadAskEnds();
-    const id = `secret:${ask.address}:${ask.name}:${Date.now()}`;
-    const ref = this.workerTasks().get(ask.address)?.ref;
-    const at = ref ? this.afterNews(ref, this.seenAt(`s:${ask.address}|${ask.name}`)) : this.seenAt(`s:${ask.address}|${ask.name}`);
-    this.askEnds = [...this.askEnds, { id, title: `${ref ? `${ref} · ` : ""}Secret: ${ask.name}`, how, at }].slice(-20);
-    try { localStorage.setItem(`askends:${this.addr}`, JSON.stringify(this.askEnds)); } catch {}
-  }
 
   // 聊天首次见到无自带时间的内容(密钥请求)时的时刻:每个
   // 聊天(shared "chat.cardseen"),因此后打开的任务聊天会把卡片放回它
@@ -908,7 +884,7 @@ export default class Chat extends View {
     const cq = this.codexCard();
     if (cq) out.push({ id: `card:${cq.id}`, at: cq.at, strips: this.codexCards.strips(cq, { who: "Codex" }), owner: this.codexCards, ask: cq, question: true });
     for (const a of this.sasks ?? []) {
-      if (!a.kept) out.push({ id: `card:s:${a.name}`, at: this.seenAt(`s:${a.address}|${a.name}`), strips: this.secretCards.strips(a, { who: this.cli() }) });
+      // 密钥卡片已移除
     }
     const own = this.addr && openCard(this.addr);
     if (own) out.push({ id: `card:${own.id}`, at: own.opened, strips: screenStrips(own, { who: this.cli(),
@@ -917,15 +893,12 @@ export default class Chat extends View {
     // worker 的:以其 task 为标题,其聊天是右侧的一个低调链接。
     const open = (id, ref, title, terminal) => [linkCtl(`wask-open-${id}`, "打开对话", () => openTaskThread(terminal, ref, title))];
     for (const a of this.wasks ?? []) {
-      if (a.secret) {
-        if (!a.secret.kept) out.push({ id: `card:${a.id}`, at: this.afterNews(a.ref, this.seenAt(`s:${a.secret.address}|${a.secret.name}`)),
-          strips: this.secretCards.strips(a.secret, { who: a.ref, links: open(a.id, a.ref, a.title, a.terminal) }) });
-      } else out.push({ id: `card:${a.id}`, at: this.afterNews(a.ref, askAt(a.id)), owner: this.workerCards, ask: a,
+      if (!a.secret) out.push({ id: `card:${a.id}`, at: this.afterNews(a.ref, askAt(a.id)), owner: this.workerCards, ask: a,
         strips: this.workerCards.strips(a, { who: a.ref, links: open(a.id, a.ref, a.title, a.terminal), terminal: false, chatHint: "或在它自己的对话里写给它。" }) });
     }
     for (const [addr, x] of this.workerTasks()) {
       // 其 secret 请求的时刻,即便被它自己的问题遮住也会记录(seenAt())。
-      for (const s of this.secretCards.items(addr)) if (!s.kept) this.seenAt(`s:${s.address}|${s.name}`);
+      // 密钥卡片已移除
       const card = openCard(addr);
       if (card) out.push({ id: `card:${card.id}`, at: this.afterNews(x.ref, card.opened), strips: screenStrips(card, { who: x.ref, links: open(card.id, x.ref, x.title, addr),
         busy: this.screenBusy.has(card.id), error: this.screenErr.get(card.id), press: (i, cx) => this.pressScreen(card, i, cx) }) });
@@ -1955,13 +1928,7 @@ export default class Chat extends View {
   // 本文件夹的任务,即 agent 工作处(herdr-task;远程 agent 则在其机器上)。
   // 含已归档的(list 默认不含,需 --archived):mention 仍能找到它们。
   async loadTasks() {
-    const folder = this.t?.foreground?.cwd ?? this.t?.cwd;
-    if (!folder) return;
-    const args = [...(this.machine ? ["--on", this.machine] : []), "list", "--json", "--folder", folder];
-    const [r, old] = await Promise.all([args, [...args, "--archived"]].map((a) => exec("herdr-task", a).catch(() => null)));
-    const tasks = (out) => { try { const d = JSON.parse(out?.stdout ?? "{}"); return (d.tasks ?? []).map((x) => ({ ...x, folder: d.folder })); } catch { return null; } };
-    const now = tasks(r);
-    if (now) this.tasks = [...now, ...(tasks(old) ?? [])];
+    // 任务层已移除
   }
 
  // 消息提及的任务:按 id(HAT-1,来自 herdr-task 的 `ref`)或按 形式。
@@ -2000,8 +1967,7 @@ export default class Chat extends View {
   // 其 machine 上每个文件夹的任务(herdr-task list --all):space 的任务可位于任意
   // 文件夹,而不只是其 Assistant 运行处。
   async loadSpaceTasks() {
-    const r = await exec("herdr-task", [...(this.machine ? ["--on", this.machine] : []), "list", "--all", "--json"]).catch(() => null);
-    try { const d = JSON.parse(r?.stdout ?? "null"); if (Array.isArray(d)) this.spaceTasks = d.flatMap((g) => (g.tasks ?? []).map((x) => ({ ...x, folder: g.folder }))); } catch {}
+    // 任务层已移除
   }
 
   taskSig() {
@@ -2449,57 +2415,14 @@ export default class Chat extends View {
   // 启动它,因此它不会获得 pane、tab 或 herdr.chat(parked 清理会终止它);
   // 任务面板的视图随后跟随新 worker,如同 Resume 之后。
   switchTask(pick, cx) {
-    if (this.restarting || !this.addr) return;
-    this.restarting = true;
-    this.note = { id: `note-${Date.now()}`, text: "重启中…" };
-    cx.spawn(async (cx) => {
-      try {
-        const t = JSON.parse((await hc(["get", this.addr, "--json"])).stdout);
-        const k = this.taskKey;
-        const ref = k?.id != null ? String(k.id) : t.labels?.["herdr.task"];
-        const folder = k?.folder ?? t.foreground?.cwd ?? t.cwd;
-        if (!ref || !folder) throw new Error("此对话的任务未找到。");
-        const built = agent.argvFor(pick, { agent: this.kind, argv: t.foreground?.argv ?? [] });
-        const on = k?.machine ?? this.machine;
-        this.swapping = true;
-        const r = await exec(`${appHome()}/mods/tasks/bin/herdr-task.cmd`, [...(on ? ["--on", on] : []), "switch", ref, "--folder", folder,
-          "--argv", JSON.stringify(built.base), "--json"]);
-        let out = null;
-        try { out = JSON.parse(r.stdout || "null"); } catch {}
-        if (r.code !== 0 || !out?.terminal) throw new Error(out?.error || r.stderr?.trim().split("\n").pop() || "Its agent didn't start.");
-        const addr = on && !String(out.terminal).includes("/") ? `${on}/${out.terminal}` : out.terminal;
-        setShared("tasks.thread", { ...(shared("tasks.thread") ?? {}), terminal: addr, log: null, note: null, at: Date.now() });
-      } catch (e) {
-        this.note = null;
-        toast({ title: "agent 没有重启", body: plainError(e), level: "error" });
-      }
-      this.swapping = false;
-      this.restarting = false;
-      cx.notify();
-    });
+    // 任务层已移除
   }
 
   // 按钮按 tasks panel 的样式绘制:primary 是该视图唯一的主操作。
   // 已完成或已停止任务的 Resume:herdr-task resume 在其会话上重新启动 agent
   // (已消失时进行 handoff);Tasks panel 的视图随后跟随新 agent。
   resumeTask(cx) {
-    const k = this.taskKey;
-    if (!k || this.resuming) return;
-    this.resuming = true;
-    cx.spawn(async (cx) => {
-      try {
-        const r = await exec(`${appHome()}/mods/tasks/bin/herdr-task.cmd`, [...(k.machine ? ["--on", k.machine] : []), "resume", String(k.id), "--json", "--folder", k.folder]);
-        let out = null;
-        try { out = JSON.parse(r.stdout || "null"); } catch {}
-        if (r.code !== 0 || !out?.terminal) throw new Error(out?.error || r.stderr?.trim().split("\n").pop() || "Its agent didn't start.");
-        const addr = k.machine && !String(out.terminal).includes("/") ? `${k.machine}/${out.terminal}` : out.terminal;
-        setShared("tasks.thread", { ...(shared("tasks.thread") ?? {}), terminal: addr, log: null, note: null, at: Date.now() });
-      } catch (e) {
-        toast({ title: "无法恢复任务", body: plainError(e), level: "error" });
-      }
-      this.resuming = false;
-      cx.notify();
-    });
+    // 任务层已移除
   }
 
   button(id, label, icon, kind, t, fn) {
@@ -4029,16 +3952,6 @@ export default class Chat extends View {
     this.sizeBox();
     // An Assistant's chat: its tasks' workers' asks, before the rows (their live rows say so).
     this.wasks = this.workerAsks(cx);
-    // Secrets asked for: this agent's, and its workers' (shown with their asks); another machine's
-    // agents using one are answered from here (secrets.js serveRemote()).
-    this.sasks = this.addr ? this.secretCards.items(this.addr) : [];
-    this.secretCards.prepare([...this.sasks, ...this.wasks.filter((a) => a.secret).map((a) => a.secret)], cx);
-    secrets.serveRemote(terminals());
-    if (this.focusSecret) {
-      const ask = this.sasks.find((a) => !a.kept) ?? this.wasks.find((a) => a.secret)?.secret;
-      if (Date.now() - this.focusSecret > 5000) this.focusSecret = null;
-      else if (ask && this.secretCards.ready(ask)) { this.focusSecret = null; cx.timer.after(0, () => this.secretCards.focus(ask)); }
-    }
     const rows = this.rows();
     // First-seen times this render found (seenAt()), shared once it's done; the newest 60 kept.
     if (this.seenNew && !this.seenFlush) {

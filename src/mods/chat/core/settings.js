@@ -16,7 +16,6 @@ export const SECTIONS = [
  // Assistant 的 header
  { id: "autopilot", title: "Autopilot", icon: "plane", space: true },
  { id: "notify", title: "通知", icon: "bell", space: true },
- { id: "secrets", title: "密钥", icon: "key", space: true },
  { id: "machines", title: "机器", icon: "network" },
  { id: "window", title: "窗口", icon: "layout" },
  { id: "web", title: "网页", icon: "globe" },

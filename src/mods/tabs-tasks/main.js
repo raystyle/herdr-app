@@ -4,7 +4,6 @@ import { panes, run, openOverlay, theme, window, shared, setShared, layout, sett
 import { spacesWithChats as spaces, sweep } from "./parked.js";
 import { agentIn, isCoordinatorTab, closeTab, watchNewSpaces, newSpace, openCoordinator, renameTab, renameSpace } from "./coordinator.js";
 import { startInbox, count as inboxCount, countsByTab, readyCount, readyByTab, showInbox, toAlert } from "./inbox.js";
-import { serveRemote } from "./secrets.js";
 import { watchService } from "./service.js";
 import { countBadge, H, TEXT, RADIUS } from "./ui.js";
 import { on as addonOn } from "./addons.js";
@@ -126,7 +125,6 @@ export default class Tabs extends View {
 
   draw(cx) {
     // 另一台 machine 的 agent 使用 secret:由这里应答(secrets.js,bin/herdr-secret serve)。
-    serveRemote();
     watchNewSpaces(spaces());
     const t = theme();
     const space = spaces().find(p => p.active);
