@@ -1,0 +1,7 @@
+# Python
+__pycache__/
+*.pyc
+
+# Herdr app 生成的编辑器辅助文件(每次启动重写)
+src/mods/*/gpui-kit.d.ts
+src/mods/*/jsconfig.json
