@@ -11,7 +11,7 @@ herdr-app(Windows)的中文定制界面:chat 对话 + 终端模式。
   - pane-chat — agent 窗格头,Chat|Terminal 切换
   - chat — 对话(读 Claude Code / Codex 会话日志渲染成聊天气泡、问答卡片)
   - chat-models / chat-image — 模型选择、图片查看
-  - workspace-chrome-winapp — 侧栏头部(搜索/折叠)与底栏(设置)
+  - sidebar — 侧栏头部(搜索/折叠)与底栏(设置)
   - workspace-status-chat — 底部状态栏
   - toasts / confirm-chat / prompt-chat — 通知、确认框、输入框
   - menu-tasks / new-menu-tasks — 右键菜单、+ 菜单

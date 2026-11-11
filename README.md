@@ -35,7 +35,7 @@ AGENTS.md        维护者手册:目录说明、部署方式、关键坑
 | chat-models / chat-image | 模型选择、图片查看 |
 | spaces-chat | 侧栏:空间列表、分区、置顶、搜索 |
 | tabs-tasks | 标签栏:标签页、+ 菜单、Files/Changes 面板按钮 |
-| workspace-chrome-winapp | 侧栏头部与底部(搜索、折叠、设置入口) |
+| sidebar | 侧栏头部与底部(搜索、折叠、设置入口) |
 | workspace-status-chat | 状态栏 |
 | menu-tasks / new-menu-tasks | 右键菜单、+ 菜单 |
 | confirm-chat / prompt-chat | 确认框、输入提示 |

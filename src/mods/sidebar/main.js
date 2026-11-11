@@ -37,7 +37,7 @@ export default class WorkspaceChrome extends View {
     if (props()?.footer) {
       const row = (id, icon, label, action) => h_flex().id(id).h(28).px(8).gap(9).items_center().rounded(8)
         .text_color(t.muted).hover(s => s.bg(t.hover).text_color(t.foreground)).cursor_pointer()
-        .on_click(action).child(svg(`mods/workspace-chrome-winapp/${icon}.svg`).size(14))
+        .on_click(action).child(svg(`mods/sidebar/${icon}.svg`).size(14))
         .when(!collapsed, el => el.child(label));
       return v_flex().size_full().bg(t.chrome).border_t(1).border_color(t.border).px(8).pt(4).pb(8).text_size(13)
         // Herdr 自身设置,出厂状态(含其更新圆点),然后是 herdr-winapp 的
@@ -51,8 +51,8 @@ export default class WorkspaceChrome extends View {
  // 语音通话,位于 Search 旁:mods/spaces-chat 发起(shared 的 "voice.startreq");通话中,其
       // Mute 和 End 各在其位
       // 精简:已移除语音按钮
-      .when(!collapsed, el => el.child(this.button("search", svg("mods/workspace-chrome-winapp/search.svg").size(15), () => run("mod.open", { name: "jump" }))))
+      .when(!collapsed, el => el.child(this.button("search", svg("mods/sidebar/search.svg").size(15), () => run("mod.open", { name: "jump" }))))
       // 在 macOS rail 上红绿灯占满整行;agents 列表的 » 可将其展开。
-      .when(!(collapsed && window()?.platform === "macos"), el => el.child(this.button("sidebar-toggle", svg("mods/workspace-chrome-winapp/sidebar.svg").size(15), toggleSidebar)));
+      .when(!(collapsed && window()?.platform === "macos"), el => el.child(this.button("sidebar-toggle", svg("mods/sidebar/sidebar.svg").size(15), toggleSidebar)));
   }
 }
